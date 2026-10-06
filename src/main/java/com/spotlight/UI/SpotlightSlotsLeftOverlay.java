@@ -1,0 +1,35 @@
+package com.spotlight.UI;
+
+import com.spotlight.SpotlightPlugin;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayPosition;
+
+import javax.inject.Inject;
+import java.awt.*;
+
+public class SpotlightSlotsLeftOverlay extends Overlay {
+
+    public int slotsLeft = 28;
+    public int fontSize = 50;
+
+    @Inject
+    public SpotlightSlotsLeftOverlay(SpotlightPlugin spotlightPlugin) {
+        super(spotlightPlugin);
+
+        setPosition(OverlayPosition.BOTTOM_RIGHT);
+        setDragTargetable(true);
+        setResizable(false);
+    }
+
+    @Override
+    public Dimension render(Graphics2D graphics) {
+        graphics.setFont(new Font(graphics.getFont().getFontName(),Font.PLAIN,fontSize));
+        FontMetrics metrics = graphics.getFontMetrics();
+        String str = slotsLeft + "";
+
+        graphics.setColor(Color.LIGHT_GRAY);
+        graphics.drawString(str,0,metrics.getAscent());
+
+        return new Dimension(metrics.stringWidth(str),metrics.getAscent());
+    }
+}
