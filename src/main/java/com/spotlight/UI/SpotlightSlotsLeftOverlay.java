@@ -2,6 +2,7 @@ package com.spotlight.UI;
 
 import com.spotlight.SpotlightPlugin;
 import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 import javax.inject.Inject;
@@ -17,6 +18,8 @@ public class SpotlightSlotsLeftOverlay extends Overlay {
         super(spotlightPlugin);
 
         setPosition(OverlayPosition.BOTTOM_RIGHT);
+        // Draw above the blackout overlay (ABOVE_WIDGETS/UNDER_WIDGETS) so the count stays visible
+        setLayer(OverlayLayer.ALWAYS_ON_TOP);
         setDragTargetable(true);
         setResizable(false);
     }
