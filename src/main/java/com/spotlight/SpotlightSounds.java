@@ -3,9 +3,9 @@ package com.spotlight;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.audio.AudioPlayer;
 
+import net.runelite.client.util.Filepath;
+
 import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -21,14 +21,14 @@ public class SpotlightSounds {
     private static final long FALLBACK_DURATION_MS = 2000;
 
     private final AudioPlayer audioPlayer;
-    private final File[] files;
+    private final Filepath[] files;
 
     private final long[] cachedMTime;
     private final long[] durationMs;
     private final int[] playsRemaining;
     private final long[] playingUntil;
 
-    public SpotlightSounds(AudioPlayer audioPlayer, File[] files) {
+    public SpotlightSounds(AudioPlayer audioPlayer, Filepath[] files) {
         this.audioPlayer = audioPlayer;
         this.files = files;
         cachedMTime = new long[files.length];
@@ -69,29 +69,37 @@ public class SpotlightSounds {
 
     private void startNext(int index) {
         playsRemaining[index]--;
-        File file = files[index];
+        Filepath file = files[index];
         try {
             audioPlayer.play(file, 0f);
             playingUntil[index] = System.currentTimeMillis() + getDurationMs(index);
         } catch (Exception e) {
-            log.warn("Unable to play sound {}", file.getName(), e);
+            log.warn("Unable to play sound {}", file.getFileName(), e);
             playsRemaining[index] = 0;
         }
     }
 
     private long getDurationMs(int index) {
-        File file = files[index];
-        long mtime = file.lastModified();
-        if (mtime != cachedMTime[index]) {
-            cachedMTime[index] = mtime;
-            durationMs[index] = readWavDurationMs(file);
+        Filepath file = files[index];
+        try {
+            long mtime = file.getLastModifiedTime().toMillis();
+            if (mtime != cachedMTime[index]) {
+                try (InputStream in = file.openInputStream()) {
+                    durationMs[index] = readWavDurationMs(in);
+                }
+                cachedMTime[index] = mtime;
+            }
+        } catch (IOException e) {
+            log.debug("Could not read wav header of {}", file.getFileName(), e);
+            return FALLBACK_DURATION_MS;
         }
         return durationMs[index];
     }
 
     /** Reads byte rate from the "fmt " chunk and the "data" chunk size from a RIFF/WAVE header. */
-    static long readWavDurationMs(File file) {
-        try (InputStream in = new FileInputStream(file); DataInputStream data = new DataInputStream(in)) {
+    static long readWavDurationMs(InputStream in) {
+        try {
+            DataInputStream data = new DataInputStream(in);
             byte[] tag = new byte[4];
             data.readFully(tag);
             if (!"RIFF".equals(new String(tag, "US-ASCII"))) {
@@ -121,7 +129,6 @@ public class SpotlightSounds {
                 }
             }
         } catch (IOException e) {
-            log.debug("Could not read wav header of {}", file.getName(), e);
             return FALLBACK_DURATION_MS;
         }
     }

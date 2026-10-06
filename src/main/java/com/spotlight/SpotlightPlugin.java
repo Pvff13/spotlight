@@ -27,16 +27,19 @@ import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Filepath;
 import org.apache.commons.lang3.ArrayUtils;
 
 
 import java.awt.*;
-import java.io.*;
 import java.util.ArrayList;
 
 @Slf4j
 @PluginDescriptor(
-		name = "Spotlight"
+		name = "Spotlight",
+		internalName = "spotlight",
+		// Moves an existing .runelite/spotlight folder (sounds, account files) into plugin-data on first start
+		legacyDataDirectory = "spotlight"
 )
 public class SpotlightPlugin extends Plugin
 {
@@ -57,7 +60,9 @@ public class SpotlightPlugin extends Plugin
 
 	private SpotlightAccountManagerFrame currentManager = null;
 
-	private File spotlightDirectory = new File(RuneLite.RUNELITE_DIR,"spotlight");
+	// .runelite/plugin-data/spotlight, set in startUp
+	private Filepath spotlightDirectory;
+	private Filepath lockFile;
 
 	// NOTE: Accessed by SpotlightNearbyPanel
 	public ArrayList<GroundItem> nearbyItems = new ArrayList<>();
@@ -74,20 +79,13 @@ public class SpotlightPlugin extends Plugin
 
 	private Item[] lastPlayerInventory = null;
 
-	public static final String LOCK_FILE = "spotlightDisableBLACKOUT.txt";
+	private static final String LOCK_FILE = "disable-blackout.lock";
+	private static final String[] SOUND_FILES = {"yoink.wav", "shard.wav", "onyx.wav", "prayer.wav", "health.wav", "regularDrop.wav"};
 
 	//GP/hr tracking
 	public int GPhr = 0;
 
 
-	public final File[] files = {
-			new File(spotlightDirectory, "yoink.wav"),
-			new File(spotlightDirectory, "shard.wav"),
-			new File(spotlightDirectory, "onyx.wav"),
-			new File(spotlightDirectory, "prayer.wav"),
-			new File(spotlightDirectory, "health.wav"),
-			new File(spotlightDirectory, "regularDrop.wav")
-	};
 	private SpotlightSounds sounds;
 	private final byte YOINK = 0;
 	private final byte SHARD = 1;
@@ -179,7 +177,7 @@ public class SpotlightPlugin extends Plugin
 		spotlightSlotsLeftOverlay.slotsLeft = getSlotsLeft();
 	}
 	private void updateBlackout() {
-		if(!config.blackoutOverlay() || new File(RuneLite.RUNELITE_DIR,LOCK_FILE).exists()) {
+		if(!config.blackoutOverlay() || lockFile.exists()) {
 			overlayManager.remove(spotlightBlackoutOverlay);
 			return;
 		}
@@ -271,6 +269,11 @@ public class SpotlightPlugin extends Plugin
 			return false;
 		}
 		return client.getScene().getTiles()[0][coords.getSceneX()][coords.getSceneY()].getWallObject() != null;
+	}
+
+	// Used by the account tracker window's "Force Disable Blackout" button
+	public Filepath getLockFile() {
+		return lockFile;
 	}
 
 	public String getItemName(int id) {
@@ -414,10 +417,17 @@ public class SpotlightPlugin extends Plugin
 	}
 
 	@Override
-	protected void startUp()
+	protected void startUp() throws Exception
 	{
+		spotlightDirectory = getPluginDirectory();
+		lockFile = spotlightDirectory.joinSegment(LOCK_FILE);
+		Filepath[] soundFiles = new Filepath[SOUND_FILES.length];
+		for(int i = 0; i < SOUND_FILES.length; i++) {
+			soundFiles[i] = spotlightDirectory.joinSegment(SOUND_FILES[i]);
+		}
+
 		spotlightAccountManager = new SpotlightAccountManager(spotlightDirectory);
-		sounds = new SpotlightSounds(audioPlayer, files);
+		sounds = new SpotlightSounds(audioPlayer, soundFiles);
 
 		spotlightAltarPanel = new SpotlightAltarOverlay(this,0,0,config.altarThreshold(),config.altarBackground(),config.altarForeground(),config.altarForegroundLow(),config.altarForegroundOff(),config.altarFlashing());
 		spotlightRSNOverlay = new SpotlightRSNOverlay(this);

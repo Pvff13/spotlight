@@ -426,7 +426,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customBlushard",
 			name = "Shard EarBlaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\shard.wav' on windows",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\shard.wav' on windows",
 			section = earBlasters
 	)
 	default boolean customBlushard() {
@@ -436,7 +436,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customOnItsBoltTips",
 			name = "Onyx EarBlaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\onyx.wav' on windows",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\onyx.wav' on windows",
 			section = earBlasters
 	)
 	default boolean customOnItsBoltTips() {
@@ -446,7 +446,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customYoink",
 			name = "Yoink EarBlaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\yoink.wav' on windows",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\yoink.wav' on windows",
 			section = earBlasters
 	)
 	default boolean customYoink() {
@@ -456,7 +456,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customPrayer",
 			name = "Prayer EarBlaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\prayer.wav' on windows",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\prayer.wav' on windows",
 			section = earBlasters
 	)
 	default boolean customPrayer() {
@@ -466,7 +466,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customLowHP",
 			name = "Low HP Blaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\health.wav' on windows",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\health.wav' on windows",
 			section = earBlasters
 	)
 	default boolean customLowHP() {
@@ -477,7 +477,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "customRegularDrops",
 			name = "Regular Drop EarBlaster",
-			description = "Place file in '%userprofile%\\.runelite\\spotlight\\regularDrop.wav' on windows, only works for items over 'Valuable Threshold' threshold set in General!",
+			description = "Place file in '%userprofile%\\.runelite\\plugin-data\\spotlight\\regularDrop.wav' on windows, only works for items over 'Valuable Threshold' threshold set in General!",
 			section = earBlasters
 	)
 	default boolean customRegularDrops() {
@@ -509,7 +509,7 @@ public interface SpotlightConfig extends Config
 	@ConfigItem(
 			keyName = "useAccountTracker",
 			name = "Use Account Tracker",
-			description = "Whether or not to save info to the account tracker at %userprofile%/.runelite/spotlight/ (for many functionalities of the plugin this is recommended)",
+			description = "Whether or not to save info to the account tracker at %userprofile%/.runelite/plugin-data/spotlight/ (for many functionalities of the plugin this is recommended)",
 			section = tracker
 	)
 	default boolean useAccountTracker() { return true; }

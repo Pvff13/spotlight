@@ -3,7 +3,7 @@ package com.spotlight.AccountManager;
 import com.spotlight.LootItem;
 import com.spotlight.SpotlightPlugin;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.RuneLite;
+import net.runelite.client.util.Filepath;
 
 import javax.swing.*;
 import javax.swing.text.AttributeSet;
@@ -15,7 +15,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 @Slf4j
@@ -42,16 +41,23 @@ public class SpotlightAccountManagerFrame {
 
     public SpotlightAccountManagerFrame(SpotlightAccountManager manager,boolean alwaysOnTop,SpotlightPlugin plugin) {
         this.manager = manager;
+        this.plugin = plugin;
 
         createWindow();
 
         this.frame.setAlwaysOnTop(alwaysOnTop);
-
-        this.plugin = plugin;
     }
 
     public void close() {
         frame.dispose();
+    }
+
+    private void deleteLock() {
+        try {
+            plugin.getLockFile().deleteIfExists();
+        } catch (IOException ex) {
+            log.warn("Could not remove blackout lock file", ex);
+        }
     }
 
     public void createWindow() {
@@ -81,20 +87,17 @@ public class SpotlightAccountManagerFrame {
 
         toggleBlackout = new JButton("Force Disable Blackout");
 
-        File lock = new File(RuneLite.RUNELITE_DIR,SpotlightPlugin.LOCK_FILE);
-        if(lock.exists()) {
-            lock.delete();
-        }
+        deleteLock();
         toggleBlackout.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                File file = new File(RuneLite.RUNELITE_DIR, SpotlightPlugin.LOCK_FILE);
+                Filepath file = plugin.getLockFile();
                 if(file.exists()) {
-                    file.delete();
+                    deleteLock();
                     toggleBlackout.setText("Force Disable Blackout");
                 } else {
                     try {
-                        file.createNewFile();
+                        file.write("");
                         toggleBlackout.setText("Un-force-disable Blackout");
                     } catch (IOException ex) {
                         log.warn("Could not create blackout lock file", ex);
@@ -138,10 +141,7 @@ public class SpotlightAccountManagerFrame {
 
             @Override
             public void windowClosing(WindowEvent e) {
-                File file = new File(RuneLite.RUNELITE_DIR, SpotlightPlugin.LOCK_FILE);
-                if(file.exists()) {
-                    file.delete();
-                }
+                deleteLock();
             }
 
             @Override
