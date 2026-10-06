@@ -57,15 +57,10 @@ public class SpotlightAccountManager {
 
         File file = new File(directory,name + ".txt");
 
-        try {
-            file.createNewFile();
-
-            FileWriter writer = new FileWriter(file);
+        try (FileWriter writer = new FileWriter(file)) {
             writer.write(info.toString());
-            writer.close();
-
         } catch(IOException ex) {
-            ex.printStackTrace();
+            log.warn("Could not save account info to {}", file.getName(), ex);
             return false;
         }
         return true;

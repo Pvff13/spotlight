@@ -97,7 +97,7 @@ public class SpotlightAccountManagerFrame {
                         file.createNewFile();
                         toggleBlackout.setText("Un-force-disable Blackout");
                     } catch (IOException ex) {
-                        ex.printStackTrace();
+                        log.warn("Could not create blackout lock file", ex);
                         toggleBlackout.setText("Could not disable blackout (try again)");
                     }
                 }

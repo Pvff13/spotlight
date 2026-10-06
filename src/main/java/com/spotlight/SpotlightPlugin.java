@@ -2,7 +2,6 @@ package com.spotlight;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
-import javax.sound.sampled.*;
 
 import com.spotlight.AccountManager.SpotlightAccountInfo;
 import com.spotlight.AccountManager.SpotlightAccountManager;
@@ -17,6 +16,7 @@ import net.runelite.api.events.*;
 import net.runelite.api.kit.KitType;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.RuneLite;
+import net.runelite.client.audio.AudioPlayer;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -50,6 +50,8 @@ public class SpotlightPlugin extends Plugin
 	public ItemManager itemManager;
 	@Inject
 	private ConfigManager configManager;
+	@Inject
+	private AudioPlayer audioPlayer;
 
 	private SpotlightAccountManager spotlightAccountManager;
 
@@ -72,9 +74,6 @@ public class SpotlightPlugin extends Plugin
 
 	private Item[] lastPlayerInventory = null;
 
-	private static final long CLIP_MTIME_UNLOADED = -2;
-	private static final long CLIP_MTIME_BUILTIN = -1;
-
 	public static final String LOCK_FILE = "spotlightDisableBLACKOUT.txt";
 
 	//GP/hr tracking
@@ -89,22 +88,7 @@ public class SpotlightPlugin extends Plugin
 			new File(spotlightDirectory, "health.wav"),
 			new File(spotlightDirectory, "regularDrop.wav")
 	};
-	public final Clip[] clips = {
-			null,
-			null,
-			null,
-			null,
-			null,
-			null
-	};
-	private long[] lastClipMTime = {
-			CLIP_MTIME_UNLOADED,
-			CLIP_MTIME_UNLOADED,
-			CLIP_MTIME_UNLOADED,
-			CLIP_MTIME_UNLOADED,
-			CLIP_MTIME_UNLOADED,
-			CLIP_MTIME_UNLOADED
-	};
+	private SpotlightSounds sounds;
 	private final byte YOINK = 0;
 	private final byte SHARD = 1;
 	private final byte ONYX = 2;
@@ -433,6 +417,7 @@ public class SpotlightPlugin extends Plugin
 	protected void startUp()
 	{
 		spotlightAccountManager = new SpotlightAccountManager(spotlightDirectory);
+		sounds = new SpotlightSounds(audioPlayer, files);
 
 		spotlightAltarPanel = new SpotlightAltarOverlay(this,0,0,config.altarThreshold(),config.altarBackground(),config.altarForeground(),config.altarForegroundLow(),config.altarForegroundOff(),config.altarFlashing());
 		spotlightRSNOverlay = new SpotlightRSNOverlay(this);
@@ -451,63 +436,13 @@ public class SpotlightPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		sounds.stopAll();
 		removeAllPanels();
 	}
 
-	private synchronized void playCustomSound(byte index, boolean justOnce)
+	private void playCustomSound(byte index, boolean justOnce)
 	{
-		File file = files[index];
-		long currentMTime = file.exists() ? file.lastModified() : CLIP_MTIME_BUILTIN;
-		if (clips[index] == null || currentMTime != lastClipMTime[index] || !clips[index].isOpen())
-		{
-			if (clips[index] != null)
-			{
-				clips[index].close();
-			}
-
-			try
-			{
-				clips[index] = AudioSystem.getClip();
-			}
-			catch (LineUnavailableException e)
-			{
-				lastClipMTime[index] = CLIP_MTIME_UNLOADED;
-				log.warn("Unable to play notification", e);
-				return;
-			}
-
-			lastClipMTime[index] = currentMTime;
-
-			if (!tryLoadNotification(index))
-			{
-				return;
-			}
-		}
-		clips[index].setMicrosecondPosition(0);
-		// Using loop instead of start + setFramePosition prevents a the clip
-		// from not being played sometimes, presumably a race condition in the
-		// underlying line driver
-		clips[index].loop(justOnce ? 0 : Math.min(Math.max(0,config.loopBlasters()-1),100));
-	}
-
-	private boolean tryLoadNotification(byte index)
-	{
-		File file = files[index];
-		if (file.exists())
-		{
-			try (InputStream fileStream = new BufferedInputStream(new FileInputStream(file));
-				 AudioInputStream sound = AudioSystem.getAudioInputStream(fileStream))
-			{
-				clips[index].open(sound);
-				return true;
-			}
-			catch (UnsupportedAudioFileException | IOException | LineUnavailableException e)
-			{
-				log.warn("Unable to load notification sound", e);
-			}
-		}
-
-		return false;
+		sounds.play(index, justOnce ? 1 : Math.min(Math.max(1, config.loopBlasters()), 100));
 	}
 
 	@Subscribe
@@ -645,6 +580,8 @@ public class SpotlightPlugin extends Plugin
 
 	@Subscribe
 	public void onBeforeRender(BeforeRender render) {
+		// Starts queued repeats of the sound alerts once the previous play has finished
+		sounds.update();
 		if(config.blackoutFPS() && isPlayerInGoodRegionToEnablePlugin()) {
 			updateBlackout();
 		}
@@ -749,11 +686,11 @@ public class SpotlightPlugin extends Plugin
 		}
 		if(config.loopUntil()) {
 			for(GroundItem item : nearbyItems) {
-				if(item.id == ItemID.BLOOD_SHARD && (clips[SHARD] == null || !clips[SHARD].isRunning())) {
+				if(item.id == ItemID.BLOOD_SHARD && !sounds.isPlaying(SHARD)) {
 					playCustomSound(SHARD,true);
 					break;
 				}
-				if(item.id == ItemID.ONYX_BOLT_TIPS && (clips[ONYX] == null || !clips[ONYX].isRunning())) {
+				if(item.id == ItemID.ONYX_BOLT_TIPS && !sounds.isPlaying(ONYX)) {
 					playCustomSound(ONYX,true);
 					break;
 				}
